@@ -569,8 +569,6 @@ class AllReduceEmitter {
     mlir::Value remote_buf_i64 =
         ttir::LoadOp::create(builder_,                      //
                              remote_buf_ptr_addr,           //
-                             ttir::CacheModifier::NONE,     //
-                             ttir::EvictionPolicy::NORMAL,  //
                              /*isVolatile=*/false);         //
     mlir::Value remote_buf_ptr_base =
         ttir::IntToPtrOp::create(builder_, ptr_to_elem_type_, remote_buf_i64,
@@ -608,12 +606,10 @@ class AllReduceEmitter {
     );
     // tensor<tile_shape, elem_storage_type>
     auto next_tile = mlir::cast<xtile::TensorValue>(
-        ttir::LoadOp::create(builder_,                      //
-                             ptrs,                          //
-                             mask,                          //
-                             /*other=*/mlir::Value(),       //
-                             ttir::CacheModifier::NONE,     //
-                             ttir::EvictionPolicy::NORMAL,  //
+        ttir::LoadOp::create(builder_,                 //
+                             ptrs,                     //
+                             mask,                     //
+                             /*other=*/mlir::Value(),  //
                              /*isVolatile=*/false)
             .getResult());
     // Workaround(i1_to_i8_workaround) as in fusion_emitter.
@@ -668,8 +664,7 @@ class AllReduceEmitter {
         shape                        // The tile shape.
     );
     ttir::StoreOp::create(builder_, ptrs, storage_tile,
-                          /*mask=*/mask, ttir::CacheModifier::NONE,
-                          ttir::EvictionPolicy::NORMAL);
+                          /*mask=*/mask);
     return mlir::success();
   }
 
@@ -681,9 +676,8 @@ class AllReduceEmitter {
     mlir::triton::gpu::BarrierOp::create(builder_,
                                          mlir::triton::gpu::AddrSpace::Local);
     mtx::BlockBarrierOp::create(builder_, signal_buffers_, device_rank_,
-                                signal_value, /*signal_slot=*/nullptr,
-                                builder_.getI32IntegerAttr(ctx_.world_size),
-                                /*signal_stride=*/nullptr);
+                                signal_value,
+                                builder_.getI32IntegerAttr(ctx_.world_size));
     return mlir::success();
   }
 
@@ -784,12 +778,10 @@ class AllReduceEmitter {
                                remote_buffers, rank_ids_i64);
     // Load the 64-bit addresses from the table
     // tensor<world_size x i64>
-    remote_buffers = ttir::LoadOp::create(builder_,                      //
-                                          remote_buffers,                //
-                                          /*mask=*/mlir::Value(),        //
-                                          /*other=*/mlir::Value(),       //
-                                          ttir::CacheModifier::NONE,     //
-                                          ttir::EvictionPolicy::NORMAL,  //
+    remote_buffers = ttir::LoadOp::create(builder_,                 //
+                                          remote_buffers,           //
+                                          /*mask=*/mlir::Value(),   //
+                                          /*other=*/mlir::Value(),  //
                                           /*isVolatile=*/false)
                          .getResult();
     // tensor<world_size x !ptr<elem_type>>
@@ -868,12 +860,10 @@ class AllReduceEmitter {
         tile_shape);
     // The final gather load tensor<tile_shape x elem_type>
     return mlir::cast<xtile::TensorValue>(
-        ttir::LoadOp::create(builder_,                      //
-                             final_ptrs,                    //
-                             mask,                          //
-                             /*other=*/mlir::Value(),       //
-                             ttir::CacheModifier::NONE,     //
-                             ttir::EvictionPolicy::NORMAL,  //
+        ttir::LoadOp::create(builder_,                 //
+                             final_ptrs,               //
+                             mask,                     //
+                             /*other=*/mlir::Value(),  //
                              /*isVolatile=*/false)
             .getResult());
   }
@@ -1318,9 +1308,8 @@ absl::Status EmitCollectiveEntryBarrier(mlir::ModuleOp module,
   // Inter-block barrier via signal flags. This blocks until all
   // remote ranks have also signaled.
   mtx::BlockBarrierOp::create(builder, signal_buffers_arg, rank_arg,
-                              signal_value, /*signal_slot=*/nullptr,
-                              builder.getI32IntegerAttr(world_size),
-                              /*signal_stride=*/nullptr);
+                              signal_value,
+                              builder.getI32IntegerAttr(world_size));
 
   return absl::OkStatus();
 }
