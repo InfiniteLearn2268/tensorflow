@@ -53,7 +53,7 @@ absl::StatusOr<bool> TryRemoveDeadWhileParams(HloInstruction* while_op);
 //    while loop with known trip count, k, loop induction variable i, and the
 //    initial loop induction value c, a compare(i,x) instruction is trivial if:
 //      1) x is a constant and x >= k + c.
-//      2) x is a constant x <= c.
+//      2) x is a constant and x <= c (for LT) or x < c (for GT).
 //
 // Flattening nested while loop tuples adds a whole mess of likely unnecessary
 // kGetTupleElement and kTuple operations to the graph.  We expect that tuple
