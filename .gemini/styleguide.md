@@ -116,7 +116,7 @@ standards, API stability, and consistent behavior across supported environments.
 
 *   Flag issues only when they affect clarity or long-term maintainability.
 *   Avoid suggesting purely subjective stylistic preferences that do not impact
-    readability or consistency.
+    readability or consistency and also increase efficeincy.
 
 ### 9. Idiomatic TensorFlow & Model Training
 
