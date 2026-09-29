@@ -54,7 +54,6 @@ limitations under the License.
 #include "xla/hlo/pass/hlo_pass_filter.h"
 #include "xla/parse_flags_from_env.h"
 #include "xla/service/collective_utils.h"
-#include "xla/stream_executor/cuda/nvjitlink_support.h"
 #include "xla/stream_executor/cuda/ptx_compiler_support.h"
 #include "xla/tsl/platform/logging.h"  // IWYU pragma: keep
 #include "xla/tsl/util/command_line_flags.h"
@@ -357,6 +356,7 @@ DebugOptions DefaultDebugOptionsIgnoringFlags() {
   opts.set_xla_gpu_enable_dynamic_slice_fusion(true);
   opts.set_xla_gpu_enable_dus_accumulator_zero_init_elimination(false);
   opts.set_xla_gpu_experimental_dynamic_slice_fusion_verify_offsets(false);
+  opts.set_xla_gpu_experimental_enable_dynamic_slice_table_offsets(false);
   opts.set_xla_gpu_nccl_termination_timeout_seconds(-1);
   opts.set_xla_gpu_enable_nccl_user_buffers(false);
   opts.set_xla_gpu_enable_nccl_user_buffers_in_default_space(false);
@@ -2369,6 +2369,14 @@ void MakeDebugOptionsFlags(std::vector<tsl::Flag>* flag_list,
       "annotated DynamicSliceConfig offsets match actual XLA-computed "
       "DS/DUS offsets. Adds D2H sync overhead — for debugging only."));
   flag_list->push_back(tsl::Flag(
+      "xla_gpu_experimental_enable_dynamic_slice_table_offsets",
+      bool_setter_for(
+          &DebugOptions::
+              set_xla_gpu_experimental_enable_dynamic_slice_table_offsets),
+      debug_options->xla_gpu_experimental_enable_dynamic_slice_table_offsets(),
+      "Enables DynamicSliceAnnotator to represent non-linear DS/DUS offsets "
+      "as a table with one entry per loop iteration."));
+  flag_list->push_back(tsl::Flag(
       "xla_gpu_nccl_termination_timeout_seconds",
       int64_setter_for(
           &DebugOptions::set_xla_gpu_nccl_termination_timeout_seconds),
@@ -2959,7 +2967,7 @@ void MakeDebugOptionsFlags(std::vector<tsl::Flag>* flag_list,
                     : DebugOptions::LIB_NV_JIT_LINK_MODE_DISABLED);
         return true;
       },
-      stream_executor::IsLibNvJitLinkSupported(),
+      /*default_value_for_display=*/true,
       "Use libnvjitlink for PTX-to-GPU-assembly compilation instead of "
       "calling ptxas."));
   flag_list->push_back(tsl::Flag(
